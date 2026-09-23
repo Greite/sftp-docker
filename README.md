@@ -21,7 +21,7 @@ no custom code beyond a 30-line entrypoint. Brute-force protection comes from ss
 (`PerSourcePenalties`, OpenSSH ≥ 9.8).
 
 `users.conf` follows the [atmoz/sftp](https://github.com/atmoz/sftp) format and the crypto
-algorithms are pinned to the OpenSSH 9.9 defaults, so existing clients (including SSHFS-Win)
+algorithms are pinned to the OpenSSH 9.9 defaults, so existing clients
 keep working.
 
 ## Image
