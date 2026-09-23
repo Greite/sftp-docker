@@ -1,0 +1,35 @@
+# Hardened SFTP-only sshd (chroot per user). PerSourcePenalties = built-in fail2ban (OpenSSH >= 9.8).
+# Site-specific overrides (Match blocks, AllowUsers...) go in /config/sshd/sshd_config.d/*.conf
+Include /config/sshd/sshd_config.d/*.conf
+
+HostKey /config/sshd/keys/ssh_host_ed25519_key
+HostKey /config/sshd/keys/ssh_host_rsa_key
+DebianBanner no
+LoginGraceTime 15
+MaxAuthTries 2
+PerSourceMaxStartups 5
+PerSourcePenalties authfail:60 max:86400
+ClientAliveInterval 300
+ClientAliveCountMax 2
+UseDNS no
+
+PermitRootLogin no
+DenyUsers root
+KbdInteractiveAuthentication no
+AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+
+X11Forwarding no
+AllowTcpForwarding no
+GatewayPorts no
+PermitTunnel no
+AllowAgentForwarding no
+Subsystem sftp internal-sftp
+ForceCommand internal-sftp
+ChrootDirectory %h
+
+# VERBOSE logs the key fingerprint on public key logins
+LogLevel VERBOSE
+
+# Algorithms pinned to the OpenSSH 9.9 defaults so older clients keep working: 10.0 dropped the diffie-hellman-* KEX
+KexAlgorithms sntrup761x25519-sha512,sntrup761x25519-sha512@openssh.com,mlkem768x25519-sha256,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256
+Ciphers chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com

@@ -1,0 +1,113 @@
+name: Build and Push SFTP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'entrypoint.sh'
+      - 'sshd_config'
+      - '.github/workflows/build.yml'
+  schedule:
+    - cron: '30 21,3,9,15 * * *'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: greite/sftp-docker
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    outputs:
+      needs-updating: ${{ steps.check.outputs.needs-updating }}
+      packages-outdated: ${{ steps.packages.outputs.outdated }}
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if base image was updated
+        id: check
+        uses: lucacome/docker-image-update-checker@v3
+        with:
+          base-image: debian:trixie-slim
+          image: ghcr.io/greite/sftp-docker:latest
+          platforms: linux/amd64,linux/arm64
+        continue-on-error: true
+
+      # openssh-server is not in the base image: its security updates never move
+      # debian:trixie-slim, so also look for pending upgrades in the published image.
+      - name: Check if installed packages have updates
+        id: packages
+        run: |
+          UPGRADABLE=$(docker run --rm --entrypoint sh "$REGISTRY/$IMAGE_NAME:latest" \
+            -c 'apt-get update -qq >/dev/null && apt list --upgradable 2>/dev/null | tail -n +2')
+          echo "$UPGRADABLE"
+          [ -n "$UPGRADABLE" ] && echo "outdated=true" >> "$GITHUB_OUTPUT" || true
+        continue-on-error: true
+
+  build:
+    runs-on: ubuntu-latest
+    needs: check-update
+    if: |
+      github.event_name != 'schedule' ||
+      needs.check-update.outputs.needs-updating == 'true' ||
+      needs.check-update.outputs.packages-outdated == 'true' ||
+      needs.check-update.result == 'failure'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract OpenSSH version
+        id: ssh-version
+        run: |
+          SSH_VERSION=$(docker run --rm debian:trixie-slim sh -c \
+            'apt-get update -qq >/dev/null && apt-cache policy openssh-server' \
+            | awk '/Candidate:/ {print $2}' | sed 's/^[0-9]*://; s/-.*//')
+          echo "version=${SSH_VERSION:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value={{date 'YYYYMMDD'}}
+            type=sha,prefix=
+            type=raw,value=openssh-${{ steps.ssh-version.outputs.version }},enable=${{ steps.ssh-version.outputs.version != 'unknown' }}
+
+      # no-cache: the apt layer must be rebuilt, otherwise the GHA cache would
+      # happily reuse the outdated openssh-server that triggered this build.
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          no-cache: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
