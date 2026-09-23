@@ -3,6 +3,7 @@ name: Build and Push SFTP
 on:
   push:
     branches: [main]
+    tags: ['v*'] # CalVer releases (vYYYY.MM), paths filter does not apply to tags
     paths:
       - 'Dockerfile'
       - 'entrypoint.sh'
@@ -97,6 +98,7 @@ jobs:
             type=raw,value=latest
             type=raw,value={{date 'YYYYMMDD'}}
             type=sha,prefix=
+            type=ref,event=tag
             type=raw,value=openssh-${{ steps.ssh-version.outputs.version }},enable=${{ steps.ssh-version.outputs.version != 'unknown' }}
 
       # no-cache: the apt layer must be rebuilt, otherwise the GHA cache would
