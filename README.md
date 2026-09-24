@@ -90,6 +90,8 @@ owned by root or is writable by group/others, so **mount the shares below it**, 
 - `PerSourcePenalties authfail:60 max:86400`: each failed connection blocks the source address
   for a minute, repeated failures up to a day.
 - Dead connections are dropped after 10 minutes without answer (`ClientAlive*`).
+- Built-in `HEALTHCHECK` (sshd listening on port 22, read from `/proc/net/tcp`): no probe
+  connection, so monitoring never pollutes the logs or trips the brute-force protection.
 - `KexAlgorithms` and `Ciphers` are pinned to the OpenSSH 9.9 defaults. OpenSSH 10 dropped the
   `diffie-hellman-*` key exchanges, which older clients may still need.
 - The container only needs `SETUID`, `SETGID`, `SYS_CHROOT` and `CHOWN`: drop everything else
