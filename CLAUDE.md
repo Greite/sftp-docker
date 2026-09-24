@@ -20,6 +20,13 @@ Serveur SFTP seul (OpenSSH sur Debian `trixie-slim`), un chroot par utilisateur,
   - Déclenché sur push (main), tags `v*` (CalVer `vYYYY.MM`), cron 4 fois par jour, ou manuellement
   - Rebuild si `debian:trixie-slim` a bougé (`lucacome/docker-image-update-checker`) **ou** si `apt list --upgradable` n'est pas vide dans l'image publiée (openssh-server n'est pas dans l'image de base)
 
+## Git (historique linéaire, une seule branche permanente)
+
+- `main` : seule branche permanente. Chaque release est un tag annoté `vYYYY.MM` (CalVer, `vYYYY.MM.N` pour un correctif) sur `main`, avec une release GitHub aux notes écrites à la main en anglais (New / Changes / Upgrading). Le tag déclenche la publication de l'image sur GHCR.
+- Tout travail part de `main` sur une branche `feature/<sujet>` (ou `fix/<sujet>`), rebasée sur `main` puis intégrée en fast-forward : pas de commit de merge, pas de branche `develop`.
+- Jamais de commit direct sur `main`.
+- Messages en anglais, conventional commits : `feat:`, `fix:`, `docs:`, `ci:`, `chore:`, `refactor:`.
+
 ## Contraintes
 
 - **Dépôt public : aucune donnée personnelle ici** (pas de prénoms, de noms de machines, d'adresses, de noms de produits ou de conteneurs tiers). Le contexte d'exploitation reste hors du dépôt.
