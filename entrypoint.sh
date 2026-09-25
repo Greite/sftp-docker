@@ -25,4 +25,9 @@ cp /config/sshd/authorized_keys/* /etc/ssh/authorized_keys/ 2>/dev/null || true
 chmod 755 /etc/ssh/authorized_keys
 chmod 644 /etc/ssh/authorized_keys/* 2>/dev/null || true
 
-exec /usr/sbin/sshd -D -e
+# timestamps on each log line (log viewers that read `docker logs` without -t show none);
+# through a fifo so sshd stays PID 1 and still gets docker stop's SIGTERM. Local time via $TZ
+log=/run/sshd/log
+rm -f "$log" && mkfifo "$log"
+while IFS= read -r line; do printf '%s %s\n' "$(date '+%F %T')" "$line"; done <"$log" >&2 &
+exec /usr/sbin/sshd -D -e 2>"$log"

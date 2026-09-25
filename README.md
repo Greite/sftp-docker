@@ -109,7 +109,7 @@ owned by root or is writable by group/others, so **mount the shares below it**, 
 
 ## Troubleshooting
 
-Logs go to `docker logs`:
+Logs go to `docker logs`, each line timestamped in the container's local time (set `TZ`, e.g. `-e TZ=Europe/Paris`, UTC otherwise):
 
 | Log line | Cause |
 |---|---|

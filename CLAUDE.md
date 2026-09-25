@@ -12,7 +12,7 @@ Serveur SFTP seul (OpenSSH sur Debian `trixie-slim`), un chroot par utilisateur,
 - `Dockerfile` : `debian:trixie-slim` + `apt-get upgrade` + `openssh-server` + `HEALTHCHECK`
   - sans le upgrade, le check `apt list --upgradable` de la CI rebuildrait en boucle dès qu'un paquet de la base est en retard
   - le healthcheck lit `/proc/net/tcp` au lieu de se connecter : un test TCP sur le port 22 écrit 3 lignes de log par contrôle, et un `Match Address … LogLevel QUIET` ne les cache pas (écrites avant l'évaluation du Match)
-- `entrypoint.sh` : crée les utilisateurs depuis `/config/sshd/users.conf` (format atmoz/sftp), génère les clés d'hôte si elles manquent, puis lance `sshd -D -e`
+- `entrypoint.sh` : crée les utilisateurs depuis `/config/sshd/users.conf` (format atmoz/sftp), génère les clés d'hôte si elles manquent, puis lance `sshd -D -e` (stderr passe par une fifo qui préfixe la date, `$TZ` ; sshd reste PID 1)
 - `sshd_config` : SFTP seul, chroot `%h`, `PerSourcePenalties` à la place de fail2ban, `Include /config/sshd/sshd_config.d/*.conf` pour les réglages propres au site (Match)
 - Caps minimales testées : `SETUID SETGID SYS_CHROOT CHOWN` + `no-new-privileges` (le README les montre dans le quick start)
 - `logo.svg` / `logo.png` : logo (PNG 512 px rendu depuis le SVG via Chrome headless)
